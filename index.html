@@ -524,12 +524,12 @@
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">제출물 제목 / 소과제 제목</label>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">제출물 제목 / 소과제 제목 (선택)</label>
         <input type="text" id="submit-sub-title" placeholder="예: 1차 제출 / 서론 작성 / 최종보고서" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">내용 / 답안 작성</label>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">내용 / 답안 작성 (선택)</label>
         <textarea id="submit-text-content" rows="4" placeholder="과제 답안 및 설명을 상세히 작성하세요" class="w-full p-3 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
       </div>
 
@@ -1027,7 +1027,7 @@
           } else {
             fileInfo.classList.add("hidden");
           }
-          document.getElementById("submit-modal-btn-text").innerText = "수정 완료하기";
+          document.getElementById("submit-modal-btn-text").innerText = "수정 완료";
         }
       } else {
         document.getElementById("submit-sub-title").value = "";
