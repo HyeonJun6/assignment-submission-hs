@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>과제 제출 플랫폼</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Caveat:wght@600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans KR', sans-serif; }
+    .handwriting { font-family: 'Caveat', 'Noto Sans KR', cursive; }
+    .sticky-note {
+      background: linear-gradient(135deg, #fef08a 0%, #fef9c3 100%);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      position: relative;
+    }
+    .sticky-note::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      border-width: 0 16px 16px 0;
+      border-style: solid;
+      border-color: #facc15 #f8fafc;
+      box-shadow: -1px 1px 2px rgba(0,0,0,0.1);
+    }
+    select option {
+      color: #1e293b !important;
+      background-color: #ffffff !important;
+    }
+    input[type="datetime-local"] {
+      font-size: 1.05rem !important;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      padding: 2px;
+      margin-left: 6px;
+      filter: invert(25%) sepia(90%) saturate(2000%) hue-rotate(240deg);
+    }
+    tr.draggable {
+      cursor: grab;
+    }
+    tr.draggable:active {
+      cursor: grabbing;
+    }
+    tr.dragging {
+      opacity: 0.5;
+      background-color: #e0e7ff !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col">
+
+  <!-- HEADER -->
+  <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="bg-white text-indigo-700 p-2 rounded-lg font-bold text-xl shadow-inner">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">과제 제출 플랫폼</h1>
+        </div>
+      </div>
+
+      <!-- Current Term & User Info -->
+      <div class="flex items-center space-x-4">
+        <div id="admin-term-selector" class="bg-indigo-800/80 px-3 py-1.5 rounded-lg text-sm flex items-center space-x-2 border border-indigo-600">
+          <i class="fa-solid fa-calendar-alt text-indigo-300"></i>
+          <select id="global-term-select" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
+          </select>
+        </div>
+
+        <div id="student-term-badge" class="hidden bg-indigo-800/80 px-3 py-1.5 rounded-lg text-sm items-center space-x-2 border border-indigo-600 font-medium">
+          <i class="fa-solid fa-calendar-check text-indigo-300"></i>
+          <span id="student-term-text"></span>
+        </div>
+
+        <div id="user-info-badge" class="hidden items-center space-x-2 bg-indigo-900/60 px-3 py-1.5 rounded-lg border border-indigo-500/50">
+          <i id="user-role-icon" class="fa-solid fa-user text-indigo-300"></i>
+          <span id="user-name-display" class="font-semibold text-sm"></span>
+          <button id="btn-logout" class="ml-2 text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition">
+            로그아웃
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- AUTH VIEW -->
+    <div id="auth-view" class="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+      <div class="text-center mb-8">
+        <div class="inline-flex p-4 bg-indigo-50 text-indigo-600 rounded-full mb-3">
+          <i class="fa-solid fa-user-lock text-3xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-900">로그인</h2>
+        <p class="text-slate-500 text-sm mt-1">학번을 입력하세요.</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">개인 식별 번호 (학번)</label>
+          <input type="text" id="login-input" placeholder="예: 10101" 
+                 class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+        </div>
+        <button id="btn-login" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-indigo-200">
+          로그인
+        </button>
+      </div>
+    </div>
+
+    <!-- STUDENT VIEW -->
+    <div id="student-view" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <span id="student-class-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded-full"></span>
+          <h2 class="text-2xl font-bold text-slate-900 mt-1"><span id="student-welcome-name"></span> 학생 환영합니다!</h2>
+          <p class="text-slate-500 text-sm">과제를 선택하여 여러 개의 제출물/소과제를 등록하고 관리하세요.</p>
+        </div>
+        <div class="flex items-center space-x-2 text-sm text-slate-600 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+          <i class="fa-solid fa-calendar text-indigo-500"></i>
+          <span>적용 학기: <strong id="student-term-display"></strong></span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+          <h3 class="font-bold text-lg text-slate-800 flex items-center">
+            <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i> 과제 목록 및 제출 현황
+          </h3>
+        </div>
+        <div id="student-assignment-list" class="divide-y divide-slate-100">
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN VIEW -->
+    <div id="admin-view" class="hidden space-y-6">
+      <div class="flex border-b border-slate-200 space-x-4">
+        <button id="tab-btn-assignments" class="py-3 px-4 font-semibold text-indigo-600 border-b-2 border-indigo-600 flex items-center space-x-2">
+          <i class="fa-solid fa-tasks"></i> <span>과제 관리</span>
+        </button>
+        <button id="tab-btn-students" class="py-3 px-4 font-semibold text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+          <i class="fa-solid fa-user-graduate"></i> <span>학생 명단 관리</span>
+        </button>
+        <button id="tab-btn-submissions" class="py-3 px-4 font-semibold text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+          <i class="fa-solid fa-file-invoice"></i> <span>제출물</span>
+        </button>
+        <button id="tab-btn-settings" class="py-3 px-4 font-semibold text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+          <i class="fa-solid fa-cog"></i> <span>학년도/학기 및 데이터 관리</span>
+        </button>
+      </div>
+
+      <!-- 과제 관리 탭 -->
+      <div id="admin-tab-assignments" class="space-y-6">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center">
+              <i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i> 새 과제 생성
+            </h3>
+            <span class="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-full" id="admin-current-term-indicator"></span>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">과목명 <span class="text-rose-500">*</span></label>
+              <input type="text" id="assign-subject" placeholder="예: 국어, 수학" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">대상 학년</label>
+              <select id="assign-grade" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800">
+                <option value="1">1학년</option>
+                <option value="2">2학년</option>
+                <option value="3">3학년</option>
+              </select>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-600 mb-1 text-indigo-700"><i class="fa-solid fa-clock mr-1"></i>제출 마감기한 설정</label>
+              <div class="flex items-center gap-2">
+                <input type="datetime-local" id="assign-deadline" class="w-full px-3 py-2 border-2 border-indigo-300 bg-indigo-50/40 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                <button type="button" id="btn-clear-deadline" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold px-3 py-2 rounded-xl text-xs transition shrink-0 border border-slate-300">
+                  <i class="fa-solid fa-xmark mr-1"></i>기한 없음
+                </button>
+              </div>
+            </div>
+
+            <div class="md:col-span-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <label class="block text-xs font-bold text-slate-700 mb-2">대상 학반 (복수 선택 가능)</label>
+              <div class="flex flex-wrap items-center gap-3 text-xs">
+                <label class="flex items-center space-x-1 font-semibold text-indigo-600 cursor-pointer">
+                  <input type="checkbox" id="class-checkbox-all" class="rounded text-indigo-600">
+                  <span>전체 반</span>
+                </label>
+                <span class="text-slate-300">|</span>
+                <div id="class-checkbox-container" class="flex flex-wrap gap-3"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">과제 제목 <span class="text-rose-500">*</span></label>
+            <input type="text" id="assign-title" placeholder="과제 제목을 입력하세요" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">과제 안내 / 지침 (선택 입력)</label>
+            <textarea id="assign-desc" rows="3" placeholder="학생들에게 안내할 과제 지침을 입력하세요" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">과제 양식 파일 (복수 선택 가능)</label>
+              <input type="file" id="assign-file-input" multiple class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-300 rounded-lg">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">참고 링크 (https://)</label>
+              <input type="url" id="assign-link-input" placeholder="https://example.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <button id="btn-create-assignment" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-xl transition text-sm flex items-center shadow-md">
+              <i class="fa-solid fa-paper-plane mr-2"></i> 과제 등록하기
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+            <div>
+              <h3 class="font-bold text-slate-800 flex items-center">
+                <i class="fa-solid fa-folder-open text-indigo-600 mr-2"></i> 등록된 과제 목록
+              </h3>
+              <p class="text-xs text-slate-500 mt-1">※ 마감기한 순으로 정렬됩니다. (마감기한 없는 과제는 화살표 버튼 ▲▼ 또는 <b>드래그 앤 드롭</b>으로 순서를 변경할 수 있습니다.)</p>
+            </div>
+            <button id="btn-delete-selected-templates" class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold px-3 py-1.5 rounded-lg border border-rose-200 transition flex items-center">
+              <i class="fa-solid fa-trash-can mr-1.5"></i> 선택 삭제
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs text-slate-500 uppercase border-b border-slate-100">
+                <tr>
+                  <th class="p-4 w-10 text-center">
+                    <input type="checkbox" id="select-all-templates" class="rounded text-indigo-600">
+                  </th>
+                  <th class="p-4">순서</th>
+                  <th class="p-4">과목</th>
+                  <th class="p-4">대상</th>
+                  <th class="p-4">과제명 및 첨부 파일</th>
+                  <th class="p-4">마감기한</th>
+                  <th class="p-4 text-center">관리</th>
+                </tr>
+              </thead>
+              <tbody id="admin-templates-table-body" class="divide-y divide-slate-100">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 학생 명단 관리 탭 -->
+      <div id="admin-tab-students" class="hidden space-y-6">
+        <!-- 학기 명단 동기화 안내 및 실행 영역 -->
+        <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-sm">
+              <i class="fa-solid fa-arrows-rotate text-lg"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-indigo-900 text-sm"> 다음 학기에도 동일 명단 사용</h4>
+              <p class="text-xs text-indigo-700 mt-0.5">이전 학기에 등록된 학생 명단을 현재 학기(<span class="font-bold text-indigo-900" id="roster-sync-term-display"></span>)로 그대로 가져옵니다.</p>
+            </div>
+          </div>
+          <button id="btn-sync-roster-from-prev" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition shrink-0 flex items-center">
+            <i class="fa-solid fa-copy mr-1.5"></i> 이전 학기 명단 가져오기
+          </button>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h3 class="text-lg font-bold text-slate-900 mb-2 flex items-center">
+            <i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i> 엑셀 붙여넣기 명단 빠른 등록
+          </h3>
+          <p class="text-slate-500 text-xs mb-3">엑셀 등에서 복사한 데이터를 붙여넣으세요. (형식: 학년 [탭] 반 [탭] 번호 [탭] 이름)</p>
+          <textarea id="excel-paste-input" rows="4" placeholder="1	1	1	신현준&#10;1	1	2	홍길동" class="w-full p-3 font-mono text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none mb-3"></textarea>
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-slate-400">현재 활성화된 학년도/학기로 자동 저장됩니다.</span>
+            <button id="btn-import-roster" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-sm">
+              <i class="fa-solid fa-file-import mr-1.5"></i> 명단 일괄 추가
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800 flex items-center">
+              <i class="fa-solid fa-users text-indigo-600 mr-2"></i> 등록된 학생 명단 (<span id="student-count-badge">0</span>명)
+            </h3>
+            <div class="flex space-x-2">
+              <select id="roster-filter-grade" class="text-xs border border-slate-300 rounded-lg px-2 py-1 text-slate-800">
+                <option value="all">전체 학년</option>
+                <option value="1">1학년</option>
+                <option value="2">2학년</option>
+                <option value="3">3학년</option>
+              </select>
+              <select id="roster-filter-class" class="text-xs border border-slate-300 rounded-lg px-2 py-1 text-slate-800">
+                <option value="all">전체 반</option>
+              </select>
+            </div>
+          </div>
+          <div class="max-h-96 overflow-y-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs text-slate-500 uppercase sticky top-0 border-b border-slate-100">
+                <tr>
+                  <th class="p-3">학번</th>
+                  <th class="p-3">학년</th>
+                  <th class="p-3">반</th>
+                  <th class="p-3">번호</th>
+                  <th class="p-3">이름</th>
+                  <th class="p-3 text-center">삭제</th>
+                </tr>
+              </thead>
+              <tbody id="admin-roster-table-body" class="divide-y divide-slate-100">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 제출물 탭 -->
+      <div id="admin-tab-submissions" class="hidden space-y-6">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap gap-4 justify-between items-center">
+          <div class="flex items-center space-x-3">
+            <span class="text-sm font-semibold text-slate-700">과제 필터:</span>
+            <select id="submission-filter-assignment" class="border border-slate-300 rounded-xl px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="p-5 border-b border-slate-100 bg-slate-50/50">
+            <h3 class="font-bold text-slate-800 flex items-center">
+              <i class="fa-solid fa-paperclip text-indigo-600 mr-2"></i> 학생 제출물 현황
+            </h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs text-slate-500 uppercase border-b border-slate-100">
+                <tr>
+                  <th class="p-4">학번/이름</th>
+                  <th class="p-4">과제 / 소과제 제목</th>
+                  <th class="p-4">제출일시 및 상태</th>
+                  <th class="p-4">제출 내용 및 첨부</th>
+                  <th class="p-4">AI 피드백</th>
+                  <th class="p-4 text-center">작업</th>
+                </tr>
+              </thead>
+              <tbody id="admin-submissions-table-body" class="divide-y divide-slate-100">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 학년도/학기 설정 및 데이터 초기화 -->
+      <div id="admin-tab-settings" class="hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center">
+              <i class="fa-solid fa-calendar-plus text-indigo-600 mr-2"></i> 학년도/학기 관리
+            </h3>
+            <div class="flex gap-2 mb-4">
+              <input type="text" id="new-term-input" placeholder="예: 2026학년도 2학기" class="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+              <button id="btn-add-term" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition shrink-0">
+                추가
+              </button>
+            </div>
+
+            <h4 class="font-bold text-xs text-slate-500 uppercase tracking-wider mb-2">등록된 학기 목록</h4>
+            <ul id="terms-list-group" class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden text-slate-800">
+            </ul>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-900 mb-2 flex items-center text-rose-600">
+              <i class="fa-solid fa-triangle-exclamation mr-2"></i> 선택 데이터 초기화
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">원하는 항목만 선택하여 데이터를 삭제 및 초기화할 수 있습니다.</p>
+
+            <div class="space-y-3 bg-rose-50/50 p-4 rounded-xl border border-rose-100 mb-5">
+              <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                <input type="checkbox" id="reset-target-assignments" class="rounded text-rose-600 focus:ring-rose-500">
+                <span>등록된 과제 데이터 전체 초기화</span>
+              </label>
+              <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                <input type="checkbox" id="reset-target-roster" class="rounded text-rose-600 focus:ring-rose-500">
+                <span>학생 명단 데이터 전체 초기화</span>
+              </label>
+              <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                <input type="checkbox" id="reset-target-submissions" class="rounded text-rose-600 focus:ring-rose-500">
+                <span>학생 제출물 및 피드백 데이터 초기화</span>
+              </label>
+            </div>
+
+            <button id="btn-execute-reset" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-md shadow-rose-200">
+              선택한 데이터 초기화 실행
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ASSIGNMENT EDIT MODAL -->
+  <div id="edit-assignment-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-lg text-slate-900 flex items-center">
+          <i class="fa-solid fa-pen-to-square text-indigo-600 mr-2"></i> 등록 과제 정보 수정
+        </h3>
+        <button id="btn-close-edit-modal-x" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <input type="hidden" id="edit-assign-id">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">과목명 <span class="text-rose-500">*</span></label>
+          <input type="text" id="edit-assign-subject" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">대상 학년</label>
+          <select id="edit-assign-grade" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800">
+            <option value="1">1학년</option>
+            <option value="2">2학년</option>
+            <option value="3">3학년</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1 text-indigo-700"><i class="fa-solid fa-clock mr-1"></i>제출 마감기한 설정</label>
+        <div class="flex items-center gap-2">
+          <input type="datetime-local" id="edit-assign-deadline" class="w-full px-3 py-2 border-2 border-indigo-300 bg-indigo-50/40 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+          <button type="button" id="btn-clear-edit-deadline" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-2 rounded-xl text-xs transition shrink-0 border border-rose-200">
+            <i class="fa-solid fa-calendar-xmark mr-1"></i>기한 없애기
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+        <label class="block text-xs font-bold text-slate-700 mb-2">대상 학반</label>
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <label class="flex items-center space-x-1 font-semibold text-indigo-600 cursor-pointer">
+            <input type="checkbox" id="edit-class-checkbox-all" class="rounded text-indigo-600">
+            <span>전체 반</span>
+          </label>
+          <span class="text-slate-300">|</span>
+          <div id="edit-class-checkbox-container" class="flex flex-wrap gap-3"></div>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">과제 제목 <span class="text-rose-500">*</span></label>
+        <input type="text" id="edit-assign-title" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">과제 안내 / 지침 (공란 허용)</label>
+        <textarea id="edit-assign-desc" rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+      </div>
+
+      <div class="bg-indigo-50/40 p-4 rounded-xl border border-indigo-100 space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-indigo-900 mb-1.5"><i class="fa-solid fa-paperclip mr-1"></i>기존 첨부 파일 보존 목록</label>
+          <div id="edit-assign-existing-files-container" class="space-y-1.5">
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-indigo-100">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">새 파일 추가 업로드 (선택 / 복수 가능)</label>
+          <input type="file" id="edit-assign-file-input" multiple class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 border border-slate-300 rounded-lg bg-white">
+          <p class="text-[11px] text-slate-400 mt-1">※ 새로 선택한 파일은 기존 보존 목록에 추가됩니다.</p>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">참고 링크 (https://)</label>
+        <input type="url" id="edit-assign-link-input" placeholder="https://example.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+        <button id="btn-close-edit-modal" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">취소</button>
+        <button id="btn-save-edit-assignment" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl shadow-md transition flex items-center">
+          <i class="fa-solid fa-save mr-1.5"></i> 변경사항 저장
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBMIT MODAL (학생 과제 제출 팝업) -->
+  <div id="submit-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-lg text-slate-900" id="modal-assign-title">과제 제출하기</h3>
+        <button id="btn-close-submit-modal-x" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 text-xs text-indigo-900 space-y-2">
+        <div class="flex justify-between items-center font-bold">
+          <span id="modal-deadline-display" class="text-rose-600"></span>
+        </div>
+        <p id="modal-assign-desc"></p>
+        <div id="modal-assign-attachments" class="pt-2 border-t border-indigo-100 flex flex-wrap gap-2 hidden"></div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">제출물 제목 / 소과제 제목</label>
+        <input type="text" id="submit-sub-title" placeholder="예: 1차 제출 / 서론 작성 / 최종보고서" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">내용 / 답안 작성</label>
+        <textarea id="submit-text-content" rows="4" placeholder="과제 답안 및 설명을 상세히 작성하세요" class="w-full p-3 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+      </div>
+
+      <div class="space-y-3 pt-1 border-t border-slate-100">
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-semibold text-slate-600">파일 업로드 (HWP, PDF, ZIP 등)</label>
+          </div>
+          <p class="text-[11px] text-indigo-600 font-semibold mb-1">
+            <i class="fa-solid fa-circle-info mr-1"></i>파일명 예시: 10203 신현준_탐구1_진로 독서 활동지
+          </p>
+          <input type="file" id="submit-file-input" class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-300 rounded-lg">
+          <div id="existing-file-info" class="text-xs text-indigo-600 mt-1 hidden"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">웹사이트 URL 링크 제출 (https://)</label>
+          <input type="url" id="submit-web-url" placeholder="https://github.com 또는 https://docs.google.com 등" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2">
+        <button id="btn-close-submit-modal" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">취소</button>
+        <button id="btn-process-submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl shadow-md transition flex items-center">
+          <i class="fa-solid fa-paper-plane mr-1.5"></i> <span id="submit-modal-btn-text">제출하기</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      getDocs, 
+      setDoc, 
+      updateDoc, 
+      deleteDoc, 
+      onSnapshot, 
+      writeBatch 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdyDgmPFg-Py1ej87klSWqXB8TC5yixkU",
+      authDomain: "assignment-submission-hs.firebaseapp.com",
+      databaseURL: "https://assignment-submission-hs-default-rtdb.firebaseio.com",
+      projectId: "assignment-submission-hs",
+      storageBucket: "assignment-submission-hs.firebasestorage.app",
+      messagingSenderId: "702547388370",
+      appId: "1:702547388370:web:f47dc11400725b67324a0b"
+    };
+
+    // Initialize Firebase & Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+    // Global State
+    let terms = [];
+    let currentTerm = "";
+    let currentUser = null;
+    let students = [];
+    let assignments = [];
+    let submissions = [];
+    let selectedAssignmentForSubmit = null;
+    let currentEditingSubmissionId = null;
+    let tempEditFiles = [];
+
+    // Drag & Drop State
+    let draggedRow = null;
+
+    function getCurrentCalculatedTerm() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const semester = (month >= 3 && month <= 8) ? "1학기" : "2학기";
+      const calcYear = (month < 3) ? year - 1 : year;
+      return `${calcYear}학년도 ${semester}`;
+    }
+
+    function getFormattedCurrentTimestamp() {
+      const d = new Date();
+      const pad = (n) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function generateMockAIFeedback(studentName, title) {
+      return `💡 [AI 피드백]\n${studentName} 학생, 제출물이 성공적으로 접수되었습니다.\n\n✨ 성실한 답변 작성 및 첨부가 확인되었습니다.\n📌 검토: 전체적인 완성도가 높으나 구체적 근거를 조금 더 보완해보세요!`;
+    }
+
+    // Dynamic Class Checkboxes Setup
+    function generateClassCheckboxes() {
+      const classContainer = document.getElementById("class-checkbox-container");
+      const editClassContainer = document.getElementById("edit-class-checkbox-container");
+      const rosterFilterClass = document.getElementById("roster-filter-class");
+
+      if (classContainer) {
+        classContainer.innerHTML = Array.from({length: 9}, (_, i) => i + 1).map(i => `
+          <label class="flex items-center space-x-1 text-slate-700 cursor-pointer hover:text-indigo-600 transition">
+            <input type="checkbox" value="${i}" class="class-checkbox rounded text-indigo-600">
+            <span>${i}반</span>
+          </label>
+        `).join('');
+      }
+
+      if (editClassContainer) {
+        editClassContainer.innerHTML = Array.from({length: 9}, (_, i) => i + 1).map(i => `
+          <label class="flex items-center space-x-1 text-slate-700 cursor-pointer hover:text-indigo-600 transition">
+            <input type="checkbox" value="${i}" class="edit-class-checkbox rounded text-indigo-600">
+            <span>${i}반</span>
+          </label>
+        `).join('');
+      }
+
+      if (rosterFilterClass) {
+        rosterFilterClass.innerHTML = `<option value="all">전체 반</option>` + 
+          Array.from({length: 9}, (_, i) => `<option value="${i + 1}">${i + 1}반</option>`).join('');
+      }
+
+      document.querySelectorAll('.class-checkbox').forEach(cb => {
+        cb.addEventListener('change', checkIndividualClass);
+      });
+      document.querySelectorAll('.edit-class-checkbox').forEach(cb => {
+        cb.addEventListener('change', checkIndividualEditClass);
+      });
+    }
+
+    // Firestore Realtime Synchronization
+    function setupFirestoreListeners() {
+      // 1. Terms Listener
+      onSnapshot(collection(db, "terms"), (snapshot) => {
+        if (snapshot.empty) {
+          const defaultTerm = getCurrentCalculatedTerm();
+          setDoc(doc(db, "terms", defaultTerm), { name: defaultTerm, createdAt: new Date().toISOString() });
+          return;
+        }
+        terms = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          terms.push(data.name || docSnap.id);
+        });
+        if (!currentTerm || !terms.includes(currentTerm)) {
+          currentTerm = terms[0];
+        }
+        renderTermSelectors();
+        refreshCurrentView();
+      });
+
+      // 2. Students Listener (수정: 최초 1회만 샘플 학생 생성, 삭제 후 재생성 안 됨)
+      let isStudentsInitialized = localStorage.getItem("students_init_done");
+      onSnapshot(collection(db, "students"), (snapshot) => {
+        if (snapshot.empty && !isStudentsInitialized) {
+          localStorage.setItem("students_init_done", "true");
+          isStudentsInitialized = "true";
+          const defaultTerm = getCurrentCalculatedTerm();
+          const defaultStudents = [
+            { id: `${defaultTerm}_10601`, studentId: "10601", grade: 1, classNum: 6, num: 1, name: "강나경", term: defaultTerm },
+            { id: `${defaultTerm}_10602`, studentId: "10602", grade: 1, classNum: 6, num: 2, name: "고예주", term: defaultTerm },
+            { id: `${defaultTerm}_30101`, studentId: "30101", grade: 3, classNum: 1, num: 1, name: "강민서", term: defaultTerm }
+          ];
+          defaultStudents.forEach(s => {
+            setDoc(doc(db, "students", s.id), s);
+          });
+          return;
+        }
+
+        if (!snapshot.empty) {
+          localStorage.setItem("students_init_done", "true");
+          isStudentsInitialized = "true";
+        }
+
+        students = [];
+        snapshot.forEach(docSnap => {
+          students.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        refreshCurrentView();
+      });
+
+      // 3. Assignments Listener
+      onSnapshot(collection(db, "assignments"), (snapshot) => {
+        assignments = [];
+        snapshot.forEach(docSnap => {
+          assignments.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        assignments.sort((a, b) => (a.order || 0) - (b.order || 0));
+        refreshCurrentView();
+      });
+
+      // 4. Submissions Listener
+      onSnapshot(collection(db, "submissions"), (snapshot) => {
+        submissions = [];
+        snapshot.forEach(docSnap => {
+          submissions.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        refreshCurrentView();
+      });
+    }
+
+    function refreshCurrentView() {
+      if (currentUser?.role === 'student') {
+        renderStudentAssignments();
+      } else if (currentUser?.role === 'admin') {
+        renderAdminAssignmentsTable();
+        renderStudentRosterTable();
+        renderSubmissionsTable();
+      }
+    }
+
+    function renderTermSelectors() {
+      const globalSelect = document.getElementById("global-term-select");
+      globalSelect.innerHTML = terms.map(t => `<option value="${t}" ${t === currentTerm ? 'selected' : ''}>${t}</option>`).join('');
+
+      document.getElementById("admin-current-term-indicator").innerText = `현재 선택 학기: ${currentTerm}`;
+      const rosterSyncDisplay = document.getElementById("roster-sync-term-display");
+      if (rosterSyncDisplay) rosterSyncDisplay.innerText = currentTerm;
+      
+      const termsListGroup = document.getElementById("terms-list-group");
+      if (termsListGroup) {
+        termsListGroup.innerHTML = terms.map((t, index) => `
+          <li class="px-4 py-3 text-sm flex justify-between items-center bg-white border-b border-slate-100 last:border-none">
+            <span class="font-medium text-slate-800">${t} ${t === currentTerm ? '<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded ml-2 font-bold">현재 활성</span>' : ''}</span>
+            <div class="flex items-center space-x-2">
+              ${t !== currentTerm ? `<button data-term-index="${index}" class="btn-delete-term text-xs text-rose-600 hover:text-rose-800 bg-rose-50 px-2 py-1 rounded">삭제</button>` : ''}
+            </div>
+          </li>
+        `).join('');
+
+        document.querySelectorAll('.btn-delete-term').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = parseInt(e.target.getAttribute('data-term-index'), 10);
+            deleteTerm(idx);
+          });
+        });
+      }
+    }
+
+    function changeGlobalTerm(newTerm) {
+      currentTerm = newTerm;
+      renderTermSelectors();
+      refreshCurrentView();
+    }
+
+    async function addNewTerm() {
+      const val = document.getElementById("new-term-input").value.trim();
+      if (!val) return;
+      if (!terms.includes(val)) {
+        await setDoc(doc(db, "terms", val), { name: val, createdAt: new Date().toISOString() });
+        document.getElementById("new-term-input").value = "";
+      }
+    }
+
+    async function deleteTerm(index) {
+      if (terms.length <= 1) {
+        alert("최소 하나의 학기는 유지되어야 합니다.");
+        return;
+      }
+      const termToDelete = terms[index];
+      await deleteDoc(doc(db, "terms", termToDelete));
+    }
+
+    // Authentication Logic
+    function login() {
+      const val = document.getElementById("login-input").value.trim();
+      if (!val) return;
+
+      if (val === "2020068986") {
+        currentUser = { role: "admin", name: "관리자" };
+        showView("admin");
+      } else {
+        const student = students.find(s => s.id === val || s.studentId === val);
+        if (student) {
+          currentUser = { role: "student", data: student };
+          showView("student");
+        } else {
+          alert(`등록되지 않은 학번입니다 (${val}). 입력 정보를 확인하세요.`);
+        }
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById("login-input").value = "";
+      document.getElementById("user-info-badge").classList.add("hidden");
+      document.getElementById("user-info-badge").classList.remove("flex");
+      showView("auth");
+    }
+
+    function showView(viewName) {
+      document.getElementById("auth-view").classList.add("hidden");
+      document.getElementById("student-view").classList.add("hidden");
+      document.getElementById("admin-view").classList.add("hidden");
+
+      const adminTermSelector = document.getElementById("admin-term-selector");
+      const studentTermBadge = document.getElementById("student-term-badge");
+
+      if (viewName === "auth") {
+        document.getElementById("auth-view").classList.remove("hidden");
+        adminTermSelector.classList.remove("hidden");
+        studentTermBadge.classList.add("hidden");
+      } else if (viewName === "student") {
+        document.getElementById("student-view").classList.remove("hidden");
+        document.getElementById("user-info-badge").classList.remove("hidden");
+        document.getElementById("user-info-badge").classList.add("flex");
+        
+        const sData = currentUser.data;
+        const studentId = sData.id || sData.studentId;
+        document.getElementById("user-name-display").innerText = `${sData.name} (${studentId})`;
+        document.getElementById("student-welcome-name").innerText = sData.name;
+        document.getElementById("student-class-badge").innerText = `${sData.grade}학년 ${sData.classNum}반 ${sData.num}번`;
+
+        document.getElementById("student-term-display").innerText = currentTerm;
+        document.getElementById("student-term-text").innerText = currentTerm;
+        
+        adminTermSelector.classList.add("hidden");
+        studentTermBadge.classList.remove("hidden");
+        studentTermBadge.classList.add("flex");
+
+        renderStudentAssignments();
+      } else if (viewName === "admin") {
+        document.getElementById("admin-view").classList.remove("hidden");
+        document.getElementById("user-info-badge").classList.remove("hidden");
+        document.getElementById("user-info-badge").classList.add("flex");
+        document.getElementById("user-name-display").innerText = currentUser.name;
+        
+        adminTermSelector.classList.remove("hidden");
+        studentTermBadge.classList.add("hidden");
+
+        switchAdminTab("assignments");
+      }
+    }
+
+    function renderStudentAssignments() {
+      const container = document.getElementById("student-assignment-list");
+      if (!currentUser || !currentUser.data) return;
+
+      const student = currentUser.data;
+      const studentId = student.studentId || student.id;
+
+      const filtered = assignments.filter(a => {
+        const matchesTerm = (a.term === currentTerm);
+        const matchesGrade = (a.grade.toString() === student.grade.toString());
+        const matchesClass = a.classes.includes("all") || a.classes.includes(student.classNum.toString());
+        return matchesTerm && matchesGrade && matchesClass;
+      });
+
+      filtered.sort((a, b) => {
+        if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+        if (a.deadline && !b.deadline) return -1;
+        if (!a.deadline && b.deadline) return 1;
+        return (a.order || 0) - (b.order || 0);
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">제출 가능한 과제가 없습니다.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(a => {
+        const mySubmissions = submissions.filter(s => s.assignmentId === a.id && (s.studentId === studentId || s.studentId === student.id));
+        const deadlineText = a.deadline ? new Date(a.deadline).toLocaleString('ko-KR') : "마감기한 없음";
+
+        let subListHTML = "";
+        if (mySubmissions.length > 0) {
+          subListHTML = `
+            <div class="mt-3 space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div class="text-xs font-bold text-slate-600 flex justify-between items-center">
+                <span><i class="fa-solid fa-folder-closed mr-1"></i>내가 제출한 소과제/제출물 (${mySubmissions.length}개)</span>
+              </div>
+              <div class="divide-y divide-slate-200">
+                ${mySubmissions.map(sub => `
+                  <div class="py-2 text-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div class="space-y-0.5">
+                      <div class="font-semibold text-slate-800 flex items-center gap-1.5">
+                        <span>${sub.subTitle || '과제 제출물'}</span>
+                        ${sub.isLate ? `<span class="bg-rose-100 text-rose-700 font-bold px-1.5 py-0.2 rounded text-[10px]">지각 제출</span>` : `<span class="bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.2 rounded text-[10px]">정상 제출</span>`}
+                      </div>
+                      <div class="text-[11px] text-slate-400">제출일시: ${sub.submittedAt}</div>
+                      ${sub.fileName ? `<div class="text-[11px] text-indigo-600"><a href="${sub.fileData}" download="${sub.fileName}" class="hover:underline"><i class="fa-solid fa-file-arrow-down mr-1"></i>${sub.fileName}</a></div>` : ''}
+                      ${sub.webUrl ? `<div class="text-[11px] text-sky-600"><a href="${sub.webUrl}" target="_blank" class="hover:underline"><i class="fa-solid fa-link mr-1"></i>${sub.webUrl}</a></div>` : ''}
+                    </div>
+                    <div class="flex items-center space-x-1 shrink-0">
+                      <button data-assign-id="${a.id}" data-sub-id="${sub.id}" class="btn-edit-sub bg-white hover:bg-slate-100 text-slate-700 px-2 py-1 rounded border text-[11px] transition">수정</button>
+                      <button data-sub-id="${sub.id}" class="btn-delete-sub bg-white hover:bg-rose-50 text-rose-600 px-2 py-1 rounded border border-rose-200 text-[11px] transition">삭제</button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        const filesHTML = (a.files && a.files.length > 0) 
+          ? a.files.map(f => `<a href="${f.fileData}" download="${f.fileName}" class="inline-flex items-center text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded hover:bg-amber-100"><i class="fa-solid fa-file-arrow-down mr-1"></i>${f.fileName}</a>`).join(' ')
+          : '';
+
+        return `
+          <div class="p-5 hover:bg-slate-50/50 transition border-b border-slate-100 last:border-none">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div class="space-y-1.5 flex-1">
+                <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+                  <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded font-bold">${a.subject}</span>
+                  <h4 class="font-bold text-slate-900">${a.title}</h4>
+                </div>
+                ${a.desc ? `<p class="text-xs text-slate-500">${a.desc}</p>` : ''}
+                <div class="text-xs text-rose-600 font-medium">
+                  <i class="fa-solid fa-clock mr-1"></i>마감 기한: ${deadlineText}
+                </div>
+                
+                <div class="flex items-center space-x-2 pt-1 flex-wrap gap-1">
+                  ${filesHTML}
+                  ${a.linkUrl ? `<a href="${a.linkUrl}" target="_blank" class="inline-flex items-center text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded hover:bg-sky-100"><i class="fa-solid fa-link mr-1"></i>참고 링크</a>` : ''}
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-2 shrink-0">
+                <button data-assign-id="${a.id}" class="btn-open-submit text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg shadow-sm transition flex items-center">
+                  <i class="fa-solid fa-plus-circle mr-1.5"></i> 제출물/소과제 추가
+                </button>
+              </div>
+            </div>
+
+            ${subListHTML}
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.btn-open-submit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const assignId = e.currentTarget.getAttribute('data-assign-id');
+          openSubmitModal(assignId);
+        });
+      });
+
+      document.querySelectorAll('.btn-edit-sub').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const assignId = e.currentTarget.getAttribute('data-assign-id');
+          const subId = e.currentTarget.getAttribute('data-sub-id');
+          openSubmitModal(assignId, subId);
+        });
+      });
+
+      document.querySelectorAll('.btn-delete-sub').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const subId = e.currentTarget.getAttribute('data-sub-id');
+          deleteSubmission(subId);
+        });
+      });
+    }
+
+    function openSubmitModal(assignId, submissionId = null) {
+      selectedAssignmentForSubmit = assignments.find(a => a.id === assignId);
+      if (!selectedAssignmentForSubmit) return;
+
+      currentEditingSubmissionId = submissionId;
+      const a = selectedAssignmentForSubmit;
+      
+      document.getElementById("modal-assign-title").innerText = `[${a.subject}] ${a.title}`;
+      document.getElementById("modal-assign-desc").innerText = a.desc || "안내사항 없음";
+      
+      const deadlineText = a.deadline ? `마감기한: ${new Date(a.deadline).toLocaleString('ko-KR')}` : "마감기한 없음";
+      document.getElementById("modal-deadline-display").innerText = deadlineText;
+
+      const attachBox = document.getElementById("modal-assign-attachments");
+      let attachHTML = "";
+      if (a.files && a.files.length > 0) {
+        attachHTML += a.files.map(f => `<a href="${f.fileData}" download="${f.fileName}" class="inline-flex items-center text-xs bg-white text-amber-800 border border-amber-300 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-file-arrow-down mr-1"></i>양식 (${f.fileName})</a>`).join(' ');
+      }
+      if (a.linkUrl) {
+        attachHTML += `<a href="${a.linkUrl}" target="_blank" class="inline-flex items-center text-xs bg-white text-sky-800 border border-sky-300 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-link mr-1"></i>참고 링크 열기</a>`;
+      }
+
+      if (attachHTML) {
+        attachBox.innerHTML = attachHTML;
+        attachBox.classList.remove("hidden");
+      } else {
+        attachBox.classList.add("hidden");
+      }
+
+      const fileInfo = document.getElementById("existing-file-info");
+      document.getElementById("submit-file-input").value = "";
+
+      if (submissionId) {
+        const sub = submissions.find(s => s.id === submissionId);
+        if (sub) {
+          document.getElementById("submit-sub-title").value = sub.subTitle || "";
+          document.getElementById("submit-text-content").value = sub.content || "";
+          document.getElementById("submit-web-url").value = sub.webUrl || "";
+          if (sub.fileName) {
+            fileInfo.innerText = `현재 등록된 파일: ${sub.fileName} (새 파일 선택 시 교체됩니다)`;
+            fileInfo.classList.remove("hidden");
+          } else {
+            fileInfo.classList.add("hidden");
+          }
+          document.getElementById("submit-modal-btn-text").innerText = "수정 완료하기";
+        }
+      } else {
+        document.getElementById("submit-sub-title").value = "";
+        document.getElementById("submit-text-content").value = "";
+        document.getElementById("submit-web-url").value = "";
+        fileInfo.classList.add("hidden");
+        document.getElementById("submit-modal-btn-text").innerText = "제출하기";
+      }
+
+      document.getElementById("submit-modal").classList.remove("hidden");
+      document.getElementById("submit-modal").classList.add("flex");
+    }
+
+    function closeSubmitModal() {
+      document.getElementById("submit-modal").classList.add("hidden");
+      document.getElementById("submit-modal").classList.remove("flex");
+      currentEditingSubmissionId = null;
+    }
+
+    async function processStudentSubmission() {
+      const subTitle = document.getElementById("submit-sub-title").value.trim();
+      const content = document.getElementById("submit-text-content").value.trim();
+      const webUrl = document.getElementById("submit-web-url").value.trim();
+      const fileInput = document.getElementById("submit-file-input");
+
+      if (!content && !webUrl && fileInput.files.length === 0 && !currentEditingSubmissionId) {
+        alert("내용, 파일 업로드, 또는 웹 링크 중 하나 이상을 제출해야 합니다.");
+        return;
+      }
+
+      const student = currentUser.data;
+      const studentId = student.studentId || student.id;
+      const assign = selectedAssignmentForSubmit;
+
+      let fileName = "";
+      let fileData = "";
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          alert("파일 크기가 10MB를 초과하여 제출할 수 없습니다.");
+          return;
+        }
+        fileName = file.name;
+        fileData = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const submissionTimestamp = getFormattedCurrentTimestamp();
+      let isLate = false;
+      if (assign.deadline) {
+        const now = new Date();
+        const deadlineDate = new Date(assign.deadline);
+        if (now > deadlineDate) {
+          isLate = true;
+        }
+      }
+
+      const aiFeedback = generateMockAIFeedback(student.name, assign.title);
+
+      try {
+        if (currentEditingSubmissionId) {
+          const updateObj = {
+            subTitle: subTitle || "제출물",
+            content: content,
+            webUrl: webUrl,
+            submittedAt: submissionTimestamp,
+            isLate: isLate
+          };
+          if (fileName && fileData) {
+            updateObj.fileName = fileName;
+            updateObj.fileData = fileData;
+          }
+          await updateDoc(doc(db, "submissions", currentEditingSubmissionId), updateObj);
+        } else {
+          const subId = "sub_" + Date.now();
+          const newSubData = {
+            id: subId,
+            assignmentId: assign.id,
+            assignmentTitle: assign.title,
+            subTitle: subTitle || "제출물",
+            studentId: studentId,
+            studentName: student.name,
+            grade: student.grade,
+            classNum: student.classNum,
+            num: student.num,
+            content: content,
+            fileName: fileName,
+            fileData: fileData,
+            webUrl: webUrl,
+            submittedAt: submissionTimestamp,
+            isLate: isLate,
+            feedback: aiFeedback,
+            term: currentTerm
+          };
+
+          await setDoc(doc(db, "submissions", subId), newSubData);
+        }
+
+        closeSubmitModal();
+        alert(isLate ? "과제가 '지각' 제출되었습니다." : "과제가 성공적으로 제출되었습니다!");
+      } catch (err) {
+        console.error("Firestore submission error:", err);
+        alert("Firestore 저장 중 오류가 발생했습니다. (Base64 변환 저장 시 단일 문서 1MB 제한을 확인하세요.)");
+      }
+    }
+
+    function toggleAllClasses(master) {
+      document.querySelectorAll('.class-checkbox').forEach(cb => cb.checked = master.checked);
+    }
+
+    function checkIndividualClass() {
+      const checkboxes = document.querySelectorAll('.class-checkbox');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      document.getElementById('class-checkbox-all').checked = allChecked;
+    }
+
+    function toggleAllEditClasses(master) {
+      document.querySelectorAll('.edit-class-checkbox').forEach(cb => cb.checked = master.checked);
+    }
+
+    function checkIndividualEditClass() {
+      const checkboxes = document.querySelectorAll('.edit-class-checkbox');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      document.getElementById('edit-class-checkbox-all').checked = allChecked;
+    }
+
+    // Admin Navigation
+    function switchAdminTab(tabName) {
+      ['assignments', 'students', 'submissions', 'settings'].forEach(t => {
+        document.getElementById(`admin-tab-${t}`).classList.add("hidden");
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (btn) {
+          btn.classList.remove("text-indigo-600", "border-b-2", "border-indigo-600");
+          btn.classList.add("text-slate-500");
+        }
+      });
+
+      document.getElementById(`admin-tab-${tabName}`).classList.remove("hidden");
+      const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+      if (activeBtn) {
+        activeBtn.classList.add("text-indigo-600", "border-b-2", "border-indigo-600");
+        activeBtn.classList.remove("text-slate-500");
+      }
+
+      if (tabName === 'assignments') renderAdminAssignmentsTable();
+      if (tabName === 'students') renderStudentRosterTable();
+      if (tabName === 'submissions') renderSubmissionsTable();
+      if (tabName === 'settings') renderTermSelectors();
+    }
+
+    async function createAssignmentTemplate() {
+      const subject = document.getElementById("assign-subject").value.trim();
+      const grade = document.getElementById("assign-grade").value;
+      const deadline = document.getElementById("assign-deadline").value;
+      const title = document.getElementById("assign-title").value.trim();
+      const desc = document.getElementById("assign-desc").value.trim();
+      const linkUrl = document.getElementById("assign-link-input").value.trim();
+      const fileInput = document.getElementById("assign-file-input");
+
+      const selectedClasses = [];
+      if (document.getElementById("class-checkbox-all").checked) {
+        selectedClasses.push("all");
+      } else {
+        document.querySelectorAll('.class-checkbox:checked').forEach(cb => selectedClasses.push(cb.value));
+      }
+
+      if (!subject) { alert("과목명을 입력해 주세요."); return; }
+      if (!title) { alert("과제 제목을 입력해 주세요."); return; }
+      if (selectedClasses.length === 0) { alert("대상 학반을 최소 하나 이상 선택해 주세요."); return; }
+
+      const uploadedFiles = [];
+      if (fileInput.files.length > 0) {
+        for (let i = 0; i < fileInput.files.length; i++) {
+          const file = fileInput.files[i];
+          if (file.size > MAX_FILE_SIZE_BYTES) {
+            alert(`'${file.name}' 파일 크기가 10MB를 초과하여 등록할 수 없습니다.`);
+            return;
+          }
+          const fileData = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+          });
+          uploadedFiles.push({ fileName: file.name, fileData });
+        }
+      }
+
+      const assignId = "assign_" + Date.now();
+      const newAssignData = {
+        id: assignId,
+        term: currentTerm,
+        subject,
+        grade,
+        classes: selectedClasses,
+        title,
+        desc,
+        deadline,
+        files: uploadedFiles,
+        linkUrl,
+        order: assignments.length + 1,
+        createdAt: new Date().toISOString().split('T')[0]
+      };
+
+      try {
+        await setDoc(doc(db, "assignments", assignId), newAssignData);
+
+        document.getElementById("assign-subject").value = "";
+        document.getElementById("assign-deadline").value = "";
+        document.getElementById("assign-title").value = "";
+        document.getElementById("assign-desc").value = "";
+        document.getElementById("assign-link-input").value = "";
+        fileInput.value = "";
+        document.getElementById("class-checkbox-all").checked = false;
+        toggleAllClasses({ checked: false });
+
+        alert("과제가 성공적으로 등록되었습니다.");
+      } catch (err) {
+        console.error("Assignment creation error:", err);
+        alert("Firestore 저장 중 오류가 발생했습니다.");
+      }
+    }
+
+    function openEditAssignmentModal(id) {
+      const assign = assignments.find(a => a.id === id);
+      if (!assign) return;
+
+      document.getElementById("edit-assign-id").value = assign.id;
+      document.getElementById("edit-assign-subject").value = assign.subject || "";
+      document.getElementById("edit-assign-grade").value = assign.grade || "1";
+      document.getElementById("edit-assign-deadline").value = assign.deadline || "";
+      document.getElementById("edit-assign-title").value = assign.title || "";
+      document.getElementById("edit-assign-desc").value = assign.desc || "";
+      document.getElementById("edit-assign-link-input").value = assign.linkUrl || "";
+      document.getElementById("edit-assign-file-input").value = "";
+
+      tempEditFiles = assign.files ? [...assign.files] : [];
+      renderEditExistingFiles();
+
+      const isAll = assign.classes.includes("all");
+      document.getElementById("edit-class-checkbox-all").checked = isAll;
+
+      document.querySelectorAll('.edit-class-checkbox').forEach(cb => {
+        cb.checked = isAll || assign.classes.includes(cb.value);
+      });
+
+      document.getElementById("edit-assignment-modal").classList.remove("hidden");
+      document.getElementById("edit-assignment-modal").classList.add("flex");
+    }
+
+    function renderEditExistingFiles() {
+      const container = document.getElementById("edit-assign-existing-files-container");
+      if (!tempEditFiles || tempEditFiles.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic">등록된 첨부 파일이 없습니다.</div>`;
+        return;
+      }
+
+      container.innerHTML = tempEditFiles.map((f, idx) => `
+        <div class="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-indigo-200 text-xs shadow-sm">
+          <span class="font-medium text-slate-700 truncate max-w-xs"><i class="fa-solid fa-file-lines text-amber-500 mr-1.5"></i>${f.fileName}</span>
+          <button type="button" data-file-index="${idx}" class="btn-remove-temp-file text-rose-500 hover:text-rose-700 bg-rose-50 px-2 py-0.5 rounded font-semibold transition shrink-0 ml-2">
+            <i class="fa-solid fa-xmark mr-1"></i>삭제
+          </button>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.btn-remove-temp-file').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.currentTarget.getAttribute('data-file-index'), 10);
+          tempEditFiles.splice(idx, 1);
+          renderEditExistingFiles();
+        });
+      });
+    }
+
+    function closeEditAssignmentModal() {
+      document.getElementById("edit-assignment-modal").classList.add("hidden");
+      document.getElementById("edit-assignment-modal").classList.remove("flex");
+    }
+
+    async function saveAssignmentChanges() {
+      const id = document.getElementById("edit-assign-id").value;
+      const assign = assignments.find(a => a.id === id);
+      if (!assign) return;
+
+      const subject = document.getElementById("edit-assign-subject").value.trim();
+      const grade = document.getElementById("edit-assign-grade").value;
+      const deadline = document.getElementById("edit-assign-deadline").value;
+      const title = document.getElementById("edit-assign-title").value.trim();
+      const desc = document.getElementById("edit-assign-desc").value.trim();
+      const linkUrl = document.getElementById("edit-assign-link-input").value.trim();
+      const fileInput = document.getElementById("edit-assign-file-input");
+
+      const selectedClasses = [];
+      if (document.getElementById("edit-class-checkbox-all").checked) {
+        selectedClasses.push("all");
+      } else {
+        document.querySelectorAll('.edit-class-checkbox:checked').forEach(cb => selectedClasses.push(cb.value));
+      }
+
+      if (!subject) { alert("과목명을 입력하세요."); return; }
+      if (!title) { alert("과제 제목을 입력하세요."); return; }
+      if (selectedClasses.length === 0) { alert("대상 학반을 최소 하나 이상 선택하세요."); return; }
+
+      if (fileInput.files.length > 0) {
+        for (let i = 0; i < fileInput.files.length; i++) {
+          const file = fileInput.files[i];
+          if (file.size > MAX_FILE_SIZE_BYTES) {
+            alert(`'${file.name}' 파일 크기가 10MB를 초과하여 저장할 수 없습니다.`);
+            return;
+          }
+          const fileData = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+          });
+          tempEditFiles.push({ fileName: file.name, fileData });
+        }
+      }
+
+      const updatedAssign = {
+        ...assign,
+        subject,
+        grade,
+        deadline,
+        classes: selectedClasses,
+        title,
+        desc,
+        linkUrl,
+        files: [...tempEditFiles]
+      };
+
+      try {
+        await setDoc(doc(db, "assignments", id), updatedAssign);
+        closeEditAssignmentModal();
+        alert("과제 정보가 성공적으로 수정되었습니다.");
+      } catch (err) {
+        console.error("Assignment update error:", err);
+        alert("Firestore 저장 중 오류가 발생했습니다.");
+      }
+    }
+
+    function renderAdminAssignmentsTable() {
+      const tbody = document.getElementById("admin-templates-table-body");
+      const filtered = assignments.filter(a => a.term === currentTerm);
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">현재 선택 학기(${currentTerm})에 등록된 과제가 없습니다.</td></tr>`;
+        return;
+      }
+
+      // Sort: deadlines first, then by order
+      filtered.sort((a, b) => {
+        if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+        if (a.deadline && !b.deadline) return -1;
+        if (!a.deadline && b.deadline) return 1;
+        return (a.order || 0) - (b.order || 0);
+      });
+
+      // Filter no-deadline items to handle arrow up/down limits
+      const noDeadlineItems = filtered.filter(a => !a.deadline);
+
+      tbody.innerHTML = filtered.map((a, idx) => {
+        const classText = a.classes.includes("all") ? "전체반" : a.classes.map(c => `${c}반`).join(", ");
+        const deadlineText = a.deadline ? new Date(a.deadline).toLocaleString('ko-KR') : `<span class="text-slate-400 font-normal">마감기한 없음</span>`;
+
+        const filesHTML = (a.files && a.files.length > 0)
+          ? a.files.map(f => `<span class="text-xs bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-file-lines mr-1"></i>${f.fileName}</span>`).join(' ')
+          : '';
+
+        const isNoDeadline = !a.deadline;
+        let arrowControls = '';
+        if (isNoDeadline) {
+          const ndIndex = noDeadlineItems.findIndex(item => item.id === a.id);
+          const isFirst = ndIndex === 0;
+          const isLast = ndIndex === noDeadlineItems.length - 1;
+
+          arrowControls = `
+            <div class="inline-flex flex-col ml-1 space-y-0.5">
+              <button data-assign-id="${a.id}" data-dir="up" class="btn-move-order hover:bg-slate-200 text-slate-600 rounded px-1 py-0.2 text-[10px] ${isFirst ? 'opacity-30 cursor-not-allowed' : ''}" ${isFirst ? 'disabled' : ''} title="위로 이동">▲</button>
+              <button data-assign-id="${a.id}" data-dir="down" class="btn-move-order hover:bg-slate-200 text-slate-600 rounded px-1 py-0.2 text-[10px] ${isLast ? 'opacity-30 cursor-not-allowed' : ''}" ${isLast ? 'disabled' : ''} title="아래로 이동">▼</button>
+            </div>
+          `;
+        }
+
+        const draggableAttr = isNoDeadline ? 'draggable="true" class="draggable hover:bg-slate-50 transition"' : 'class="hover:bg-slate-50 transition"';
+        const dragHandle = isNoDeadline ? `<span class="text-slate-300 hover:text-slate-500 mr-1 cursor-grab" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical text-xs"></i></span>` : '';
+
+        return `
+          <tr data-assign-id="${a.id}" ${draggableAttr}>
+            <td class="p-4 text-center">
+              <input type="checkbox" value="${a.id}" class="template-checkbox rounded text-indigo-600">
+            </td>
+            <td class="p-4 text-xs font-semibold text-slate-500">
+              <div class="flex items-center">
+                ${dragHandle}
+                <span>#${idx + 1}</span>
+                ${arrowControls}
+              </div>
+            </td>
+            <td class="p-4"><span class="bg-indigo-50 text-indigo-700 font-bold text-xs px-2 py-1 rounded">${a.subject}</span></td>
+            <td class="p-4 text-xs font-medium">${a.grade}학년 (${classText})</td>
+            <td class="p-4">
+              <div class="font-semibold text-slate-900">${a.title}</div>
+              <div class="text-xs text-slate-400 mt-0.5">${a.desc || '지침 없음'}</div>
+              <div class="flex items-center space-x-2 mt-1 flex-wrap gap-1">
+                ${filesHTML}
+                ${a.linkUrl ? `<a href="${a.linkUrl}" target="_blank" class="text-xs text-sky-600 hover:underline"><i class="fa-solid fa-link mr-1"></i>링크</a>` : ''}
+              </div>
+            </td>
+            <td class="p-4 text-xs font-medium text-rose-600">${deadlineText}</td>
+            <td class="p-4 text-center">
+              <div class="flex items-center justify-center space-x-1">
+                <button data-assign-id="${a.id}" class="btn-edit-assign text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded font-semibold transition flex items-center">
+                  <i class="fa-solid fa-pen mr-1"></i>수정
+                </button>
+                <button data-assign-id="${a.id}" class="btn-delete-single-assign text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 px-2.5 py-1 rounded transition">
+                  삭제
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Event Binding for Edit & Delete
+      document.querySelectorAll('.btn-edit-assign').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-assign-id');
+          openEditAssignmentModal(id);
+        });
+      });
+
+      document.querySelectorAll('.btn-delete-single-assign').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-assign-id');
+          deleteSingleTemplate(id);
+        });
+      });
+
+      // Arrow Click Handlers
+      document.querySelectorAll('.btn-move-order').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = e.currentTarget.getAttribute('data-assign-id');
+          const dir = e.currentTarget.getAttribute('data-dir');
+          moveAssignmentOrder(id, dir);
+        });
+      });
+
+      // Drag and Drop Event Listeners
+      const draggables = tbody.querySelectorAll('tr.draggable');
+      draggables.forEach(draggable => {
+        draggable.addEventListener('dragstart', (e) => {
+          draggedRow = draggable;
+          draggable.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        draggable.addEventListener('dragend', () => {
+          if (draggedRow) draggedRow.classList.remove('dragging');
+          draggedRow = null;
+          updateOrdersFromTableRows();
+        });
+      });
+
+      tbody.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(tbody, e.clientY);
+        if (draggedRow) {
+          if (afterElement == null) {
+            tbody.appendChild(draggedRow);
+          } else {
+            tbody.insertBefore(draggedRow, afterElement);
+          }
+        }
+      });
+    }
+
+    function getDragAfterElement(container, y) {
+      const draggableElements = [...container.querySelectorAll('tr.draggable:not(.dragging)')];
+      return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    async function updateOrdersFromTableRows() {
+      const tbody = document.getElementById("admin-templates-table-body");
+      const rows = [...tbody.querySelectorAll('tr')];
+      
+      const batch = writeBatch(db);
+      rows.forEach((row, index) => {
+        const id = row.getAttribute('data-assign-id');
+        if (id) {
+          batch.update(doc(db, "assignments", id), { order: index + 1 });
+        }
+      });
+
+      await batch.commit();
+    }
+
+    async function moveAssignmentOrder(id, direction) {
+      const noDeadlineAssignments = assignments
+        .filter(a => a.term === currentTerm && !a.deadline)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+      const index = noDeadlineAssignments.findIndex(a => a.id === id);
+      if (index === -1) return;
+
+      const batch = writeBatch(db);
+
+      if (direction === 'up' && index > 0) {
+        const currentItem = noDeadlineAssignments[index];
+        const prevItem = noDeadlineAssignments[index - 1];
+
+        batch.update(doc(db, "assignments", currentItem.id), { order: prevItem.order });
+        batch.update(doc(db, "assignments", prevItem.id), { order: currentItem.order });
+        await batch.commit();
+      } else if (direction === 'down' && index < noDeadlineAssignments.length - 1) {
+        const currentItem = noDeadlineAssignments[index];
+        const nextItem = noDeadlineAssignments[index + 1];
+
+        batch.update(doc(db, "assignments", currentItem.id), { order: nextItem.order });
+        batch.update(doc(db, "assignments", nextItem.id), { order: currentItem.order });
+        await batch.commit();
+      }
+    }
+
+    async function deleteSelectedTemplates() {
+      const checked = Array.from(document.querySelectorAll('.template-checkbox:checked')).map(cb => cb.value);
+      if (checked.length === 0) { alert("삭제할 과제를 선택하세요."); return; }
+      if (!confirm(`선택한 ${checked.length}개의 과제를 삭제하시겠습니까?`)) return;
+
+      const batch = writeBatch(db);
+      checked.forEach(id => {
+        batch.delete(doc(db, "assignments", id));
+      });
+      await batch.commit();
+    }
+
+    async function deleteSingleTemplate(id) {
+      if (!confirm("이 과제를 삭제하시겠습니까?")) return;
+      await deleteDoc(doc(db, "assignments", id));
+    }
+
+    async function syncRosterFromPreviousTerm() {
+      const otherTerms = terms.filter(t => t !== currentTerm);
+      if (otherTerms.length === 0) {
+        alert("이전에 등록된 다른 학기 데이터가 없습니다.");
+        return;
+      }
+
+      const sourceTerm = otherTerms[otherTerms.length - 1];
+      const prevStudents = students.filter(s => s.term === sourceTerm || (!s.term && sourceTerm === terms[0]));
+
+      if (prevStudents.length === 0) {
+        alert(`이전 학기(${sourceTerm})에 등록된 학생 명단이 없습니다.`);
+        return;
+      }
+
+      if (!confirm(`이전 학기(${sourceTerm})의 학생 명단(${prevStudents.length}명)을 현재 학기(${currentTerm})로 가져오시겠습니까?\n\n※ 동일한 학번이 이미 존재하는 경우 기존 정보가 업데이트됩니다.`)) {
+        return;
+      }
+
+      const batch = writeBatch(db);
+      let addedCount = 0;
+      prevStudents.forEach(prevS => {
+        const studentId = prevS.studentId || prevS.id;
+        const docId = `${currentTerm}_${studentId}`;
+        const newStudentObj = {
+          ...prevS,
+          id: docId,
+          studentId: studentId,
+          term: currentTerm
+        };
+        batch.set(doc(db, "students", docId), newStudentObj);
+        addedCount++;
+      });
+
+      await batch.commit();
+      alert(`${addedCount}명의 학생 명단이 성공적으로 ${currentTerm}에 동기화되었습니다.`);
+    }
+
+    async function importExcelRoster() {
+      const text = document.getElementById("excel-paste-input").value.trim();
+      if (!text) { alert("명단 데이터를 입력하세요."); return; }
+
+      const lines = text.split("\n");
+      let addedCount = 0;
+      const batch = writeBatch(db);
+
+      for (const line of lines) {
+        const parts = line.split("\t").map(p => p.trim());
+        if (parts.length >= 4) {
+          const grade = parseInt(parts[0], 10);
+          const classNum = parseInt(parts[1], 10);
+          const num = parseInt(parts[2], 10);
+          const name = parts[3];
+
+          if (grade && classNum && num && name) {
+            const studentId = `${grade}${classNum.toString().padStart(2, '0')}${num.toString().padStart(2, '0')}`;
+            const docId = `${currentTerm}_${studentId}`;
+            const studentObj = { id: docId, studentId, grade, classNum, num, name, term: currentTerm };
+
+            batch.set(doc(db, "students", docId), studentObj);
+            addedCount++;
+          }
+        }
+      }
+
+      await batch.commit();
+      document.getElementById("excel-paste-input").value = "";
+      alert(`${addedCount}명의 학생 명단이 등록되었습니다.`);
+    }
+
+    function renderStudentRosterTable() {
+      const gradeFilter = document.getElementById("roster-filter-grade").value;
+      const classFilter = document.getElementById("roster-filter-class").value;
+
+      const filtered = students.filter(s => {
+        const matchesTerm = (s.term === currentTerm || (!s.term && currentTerm === terms[0]));
+        const matchesGrade = gradeFilter === 'all' || s.grade.toString() === gradeFilter;
+        const matchesClass = classFilter === 'all' || s.classNum.toString() === classFilter;
+        return matchesTerm && matchesGrade && matchesClass;
+      });
+
+      document.getElementById("student-count-badge").innerText = filtered.length;
+      const tbody = document.getElementById("admin-roster-table-body");
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">등록된 학생 데이터가 없습니다.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(s => {
+        const sId = s.studentId || s.id;
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3 font-mono font-bold text-xs text-indigo-600">${sId}</td>
+            <td class="p-3 text-xs">${s.grade}학년</td>
+            <td class="p-3 text-xs">${s.classNum}반</td>
+            <td class="p-3 text-xs">${s.num}번</td>
+            <td class="p-3 font-semibold text-slate-900">${s.name}</td>
+            <td class="p-3 text-center">
+              <button data-student-id="${s.id}" class="btn-delete-student text-xs text-rose-500 hover:text-rose-700">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.btn-delete-student').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-student-id');
+          deleteStudent(id);
+        });
+      });
+    }
+
+    async function deleteStudent(id) {
+      if (!confirm(`해당 학생을 삭제하시겠습니까?`)) return;
+      try {
+        await deleteDoc(doc(db, "students", id));
+      } catch (err) {
+        console.error("Delete student error:", err);
+        alert("학생 삭제 중 오류가 발생했습니다.");
+      }
+    }
+
+    function renderSubmissionsTable() {
+      const assignSelect = document.getElementById("submission-filter-assignment");
+      const filteredAssignments = assignments.filter(a => a.term === currentTerm);
+
+      assignSelect.innerHTML = `<option value="all">전체 과제 보기</option>` + 
+        filteredAssignments.map(a => `<option value="${a.id}">[${a.subject}] ${a.title}</option>`).join('');
+
+      const selectedAssignId = assignSelect.value;
+      const filteredSubmissions = submissions.filter(s => {
+        const matchesTerm = (s.term === currentTerm);
+        const matchesAssign = selectedAssignId === 'all' || s.assignmentId === selectedAssignId;
+        return matchesTerm && matchesAssign;
+      });
+
+      const tbody = document.getElementById("admin-submissions-table-body");
+      if (filteredSubmissions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400">제출된 과제가 없습니다.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filteredSubmissions.map(s => `
+        <tr class="hover:bg-slate-50/50 transition">
+          <td class="p-4">
+            <div class="font-bold text-slate-900">${s.studentName}</div>
+            <div class="text-xs text-slate-400 font-mono">${s.studentId} (${s.grade}-${s.classNum}-${s.num})</div>
+          </td>
+          <td class="p-4">
+            <div class="font-semibold text-xs text-slate-800">${s.assignmentTitle}</div>
+            <div class="text-xs text-indigo-600 font-medium mt-0.5"><i class="fa-solid fa-tag mr-1"></i>${s.subTitle || '제출물'}</div>
+          </td>
+          <td class="p-4 text-xs">
+            <div class="text-slate-600 font-mono">${s.submittedAt}</div>
+            ${s.isLate ? `<span class="inline-block mt-1 bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded text-[11px]">지각 제출</span>` : `<span class="inline-block mt-1 bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded text-[11px]">정상 제출</span>`}
+          </td>
+          <td class="p-4">
+            <div class="max-w-xs text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+              ${s.content || '내용 없음'}
+            </div>
+            <div class="mt-1.5 space-y-1">
+              ${s.fileData ? `<a href="${s.fileData}" download="${s.fileName}" class="inline-block text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded hover:bg-amber-100"><i class="fa-solid fa-file-arrow-down mr-1"></i>${s.fileName}</a>` : ''}
+              ${s.webUrl ? `<div><a href="${s.webUrl}" target="_blank" class="text-xs text-sky-600 hover:underline"><i class="fa-solid fa-link mr-1"></i>${s.webUrl}</a></div>` : ''}
+            </div>
+          </td>
+          <td class="p-4">
+            <div class="sticky-note p-3 rounded-lg text-xs text-slate-800 leading-relaxed font-sans max-w-xs shadow">
+              <div class="font-bold text-amber-900 mb-1 flex items-center">
+                <i class="fa-solid fa-sticky-note mr-1.5 text-amber-600"></i> AI Teacher Note
+              </div>
+              <p class="whitespace-pre-line">${s.feedback || '피드백 없음'}</p>
+            </div>
+          </td>
+          <td class="p-4 text-center">
+            <button data-sub-id="${s.id}" class="btn-delete-admin-sub text-xs bg-rose-50 text-rose-600 hover:bg-rose-100 px-2 py-1 rounded border border-rose-200 transition">
+              삭제
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.querySelectorAll('.btn-delete-admin-sub').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-sub-id');
+          deleteSubmission(id);
+        });
+      });
+    }
+
+    async function deleteSubmission(id) {
+      if (!confirm("이 제출물을 삭제하시겠습니까?")) return;
+      await deleteDoc(doc(db, "submissions", id));
+    }
+
+    async function executeSelectedReset() {
+      const rAssignments = document.getElementById("reset-target-assignments").checked;
+      const rRoster = document.getElementById("reset-target-roster").checked;
+      const rSubmissions = document.getElementById("reset-target-submissions").checked;
+
+      if (!rAssignments && !rRoster && !rSubmissions) {
+        alert("초기화할 항목을 최소 하나 이상 선택해주세요.");
+        return;
+      }
+
+      if (!confirm("선택한 항목의 데이터를 초기화하시겠습니까?")) return;
+
+      try {
+        if (rAssignments) {
+          const snap = await getDocs(collection(db, "assignments"));
+          const batch = writeBatch(db);
+          snap.forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+        if (rRoster) {
+          localStorage.setItem("students_init_done", "true");
+          const snap = await getDocs(collection(db, "students"));
+          const batch = writeBatch(db);
+          snap.forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+        if (rSubmissions) {
+          const snap = await getDocs(collection(db, "submissions"));
+          const batch = writeBatch(db);
+          snap.forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+
+        document.getElementById("reset-target-assignments").checked = false;
+        document.getElementById("reset-target-roster").checked = false;
+        document.getElementById("reset-target-submissions").checked = false;
+
+        alert("선택한 데이터의 초기화가 완료되었습니다.");
+      } catch (err) {
+        console.error("Reset error:", err);
+        alert("데이터 초기화 중 오류가 발생했습니다.");
+      }
+    }
+
+    // Attach Event Listeners on DOM Content Loaded
+    window.addEventListener("DOMContentLoaded", () => {
+      generateClassCheckboxes();
+
+      document.getElementById("btn-login").addEventListener("click", login);
+      document.getElementById("login-input").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") login();
+      });
+
+      document.getElementById("btn-logout").addEventListener("click", logout);
+
+      document.getElementById("global-term-select").addEventListener("change", (e) => {
+        changeGlobalTerm(e.target.value);
+      });
+
+      document.getElementById("tab-btn-assignments").addEventListener("click", () => switchAdminTab("assignments"));
+      document.getElementById("tab-btn-students").addEventListener("click", () => switchAdminTab("students"));
+      document.getElementById("tab-btn-submissions").addEventListener("click", () => switchAdminTab("submissions"));
+      document.getElementById("tab-btn-settings").addEventListener("click", () => switchAdminTab("settings"));
+
+      document.getElementById("class-checkbox-all").addEventListener("change", (e) => toggleAllClasses(e.target));
+      document.getElementById("edit-class-checkbox-all").addEventListener("change", (e) => toggleAllEditClasses(e.target));
+
+      document.getElementById("btn-clear-deadline").addEventListener("click", () => {
+        document.getElementById("assign-deadline").value = "";
+      });
+      document.getElementById("btn-clear-edit-deadline").addEventListener("click", () => {
+        document.getElementById("edit-assign-deadline").value = "";
+      });
+
+      document.getElementById("btn-create-assignment").addEventListener("click", createAssignmentTemplate);
+
+      document.getElementById("select-all-templates").addEventListener("click", (e) => {
+        document.querySelectorAll('.template-checkbox').forEach(cb => cb.checked = e.target.checked);
+      });
+      document.getElementById("btn-delete-selected-templates").addEventListener("click", deleteSelectedTemplates);
+
+      document.getElementById("btn-import-roster").addEventListener("click", importExcelRoster);
+      document.getElementById("btn-sync-roster-from-prev").addEventListener("click", syncRosterFromPreviousTerm);
+      document.getElementById("roster-filter-grade").addEventListener("change", renderStudentRosterTable);
+      document.getElementById("roster-filter-class").addEventListener("change", renderStudentRosterTable);
+
+      document.getElementById("submission-filter-assignment").addEventListener("change", renderSubmissionsTable);
+
+      document.getElementById("btn-add-term").addEventListener("click", addNewTerm);
+      document.getElementById("btn-execute-reset").addEventListener("click", executeSelectedReset);
+
+      document.getElementById("btn-close-edit-modal-x").addEventListener("click", closeEditAssignmentModal);
+      document.getElementById("btn-close-edit-modal").addEventListener("click", closeEditAssignmentModal);
+      document.getElementById("btn-save-edit-assignment").addEventListener("click", saveAssignmentChanges);
+
+      document.getElementById("btn-close-submit-modal-x").addEventListener("click", closeSubmitModal);
+      document.getElementById("btn-close-submit-modal").addEventListener("click", closeSubmitModal);
+      document.getElementById("btn-process-submit").addEventListener("click", processStudentSubmission);
+
+      // Initialize Realtime Sync with Firestore
+      setupFirestoreListeners();
+    });
+  </script>
+</body>
+</html>
